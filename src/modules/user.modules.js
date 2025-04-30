@@ -1,6 +1,6 @@
 import mongoose, { Schema } from 'mongoose';
 import bcrypt from 'bcrypt';
-
+import JWT from 'jsonwebtoken';
 
 const userSchema = new Schema({
     fullname:{
@@ -56,7 +56,19 @@ userSchema.methods.isPasswordMatching = async function( password ){
 }
 
 //Generating a refresh token & access token when user logs in / signs in using JWT - JSON Web Token
-
+userSchema.methods.generateRefreshToke = function(){
+    JWT.sign(
+        {
+            _id: this._id,
+            username: this.username,
+            email: this.email
+        },
+        process.env.JWT_SECRET,
+        {
+            expiresIn: process.env.JWT_EXPIRES_IN,
+        }
+    )
+}
 
 
 
