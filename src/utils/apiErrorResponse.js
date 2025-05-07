@@ -10,4 +10,4 @@ class apiErrorResponse extends Error{
     }
 }
 
-export default apiErrorResponse;
+export { apiErrorResponse };

@@ -20,7 +20,12 @@ app.get("/", (req, res) =>{
     res.status(200).send("Welcome to the home page")
 })
 
+//Importing routes
 import healthCheckRoutes from './routes/healthcheck.routes.js';
+import userRegistrationRoutes from './routes/registerUser.routes.js';
+
+
+app.use('/api/v1/user', userRegistrationRoutes)
 app.use("/api/v1/healthcheck", healthCheckRoutes)
 
 export { app };
