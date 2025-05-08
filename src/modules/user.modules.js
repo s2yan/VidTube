@@ -33,7 +33,7 @@ const userSchema = new Schema({
         type: String,
         required: [true, "Password is required"],
     },
-    refreshToke:{
+    refreshToken:{
         type: String,
     }
 
@@ -57,16 +57,27 @@ userSchema.methods.isPasswordMatching = async function( password ){
 
 //Generating a refresh token & access token when user logs in / signs in using JWT - JSON Web Token
 userSchema.methods.generateRefreshToke = function(){
-    JWT.sign(
+    return JWT.sign(
         {
             _id: this._id,
             username: this.username,
             email: this.email
         },
-        process.env.JWT_SECRET,
+        process.env.REFRESH_TOKEN_SECRET,
         {
-            expiresIn: process.env.JWT_EXPIRES_IN,
+            expiresIn: process.env.REFRESHTOKEN_EXPIRES_IN,
         }
+    )
+}
+
+//Generate a action token
+userSchema.mothods.generateAccessToken = function() {
+    return JWT.sign(
+        {
+            _id: this._id
+        },
+        process.env.ACCESS_TOKEN_SECRET,
+        {expiresIn: process.env.ACCESSTOKEN_EXPIRES_IN}
     )
 }
 

@@ -21,7 +21,7 @@ app.get("/", (req, res) =>{
 })
 
 //Importing routes
-import healthCheckRoutes from './routes/healthcheck.routes.js';
+import healthCheckRoutes from './routes/healthCheck.routes.js';
 import userRegistrationRoutes from './routes/registerUser.routes.js';
 
 
