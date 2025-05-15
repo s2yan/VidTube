@@ -30,10 +30,10 @@ const userSchema = new Schema(
         coverImage: {
             type: String //cloudinary url
         },
-        videos:{
+        videos:[{
             type: Schema.Types.ObjectId,
             ref: 'Video'
-        },
+        }],
         refreshToken:{
             type: String
         }

@@ -20,7 +20,7 @@ import healthCheckRouter from './routes/healthCheck.routes.js'
 import registerUserRouter from './routes/registerUser.routes.js'
 
 app.use('/api/v1/healthcheck', healthCheckRouter)
-app.use('/api/v1/register', registerUserRouter)
+app.use('/api/v1/users', registerUserRouter)
 
 
 export { app }

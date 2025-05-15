@@ -9,6 +9,11 @@ app.get('/', (req, res)=>{
   res.status(201).send("Hello from server")
 })
 
+app.get("/search", (req, res) =>{
+  const query =  req.query.q
+  res.send(`Searching for ${query}`)
+})
+
 connectDB()
 .then(()=>
   app.listen(PORT, ()=>{
