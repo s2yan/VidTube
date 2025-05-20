@@ -28,9 +28,9 @@ const generateAccessAndRefreshToken = async function(userId){
 const registerUser = asyncHandler( async(req, res) =>{
     //res.send("User registered endpoint running")
 
-    const { fullname, email, username, password } = req.body;
+    const {email, username, password } = req.body;
 
-    if([fullname, email, username, password].some(fields => fields.trim() === "")){
+    if([email, username, password].some(fields => fields.trim() === "")){
         throw new apiErrorResponse("All fields are required", 400)
     }
 
@@ -55,24 +55,24 @@ const registerUser = asyncHandler( async(req, res) =>{
                 hasLowerCase = true
             }else if(char >= 'A' && char <= 'Z'){
                 hasUpperCase = true
-            }else if( char >= 0 && char <= 9){
+            }else if( char >= '0' && char <= '9'){
                 hasDigit = true
-            }else if (/[^a-zA-Z0-9]/.test(char)) {
+            }else if (/[!@#$&*]/.test(char)) {
                 hasSpecialChar = true;
             }
-            
-
-            if(!(hasSpecialChar && hasDigit && hasLowerCase && hasUpperCase)){
-                throw new apiErrorResponse("Password must contain a lownercase, a uppercase, a digit, a special char", 401)
-            }
-
-            return true
         }
+
+        if(!(hasSpecialChar && hasDigit && hasLowerCase && hasUpperCase)){
+            throw new apiErrorResponse("Password must contain a lownercase, a uppercase, a digit, a special char", 401)
+        }
+
+        return true
     }
 
     checkPasswordStrength(password)
+    
 
-    const avatarPath = req?.files?.avatar[0].path
+    const avatarPath = req?.files?.avatar[0]?.path
     const coverImagePath = req?.files?.coverImage[0]?.path
 
     // validate existing user
@@ -96,7 +96,6 @@ const registerUser = asyncHandler( async(req, res) =>{
     try {
         
         const user = await User.create({
-            fullname,
             email,
             username: username.toLowerCase(),
             password,
@@ -106,12 +105,12 @@ const registerUser = asyncHandler( async(req, res) =>{
     
         // If user is created successfully, send a response
     
-        const createdUSer = await User.findOne(user._id).select("-password -refreshToken")
-        if(!createdUSer){
+        const createdUser = await User.findOne(user._id).select("-password -refreshToken")
+        if(!createdUser){
             throw new apiErrorResponse("Something went wrong!!! User not created", 500)
         }
     
-        return res.status(201).json(new apiResponse(201, "User created successfully"))
+        return res.status(201).json(new apiResponse(201, createdUser, "User created successfully"))
 
     } catch (error) {
         console.log(error)
@@ -170,7 +169,30 @@ const loginUser = asyncHandler( async(req, res) =>{
 })
 
 const logoutUser = asyncHandler( async(req, res) => {
+    await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            $set:{
+                refreshtoken: undefined
+            }
+        },
+        {new : true}
+    )
 
+    const options = {
+        httpOnly: true,
+        secure: true
+    }
+
+    return res
+        .status(200)
+        .clearCookie("accessToken", options)
+        .clearCookie("refreshToken", options)
+        .json(new apiResponse(
+            200,
+            {},
+            "User logged out successfully"
+        ))
 }) 
 
 const AccessRefreshToken = asyncHandler( async(req, res) =>{
@@ -192,7 +214,7 @@ const AccessRefreshToken = asyncHandler( async(req, res) =>{
         }
 
         if(incommingRefreshToken !== user.refreshToken){
-            throw new apiErrorReponse("Invalid refresh token", 401)
+            throw new apiErrorResponse("Invalid refresh token", 401)
         }
 
         const { accessToken, refreshToken: newRefreshToken } = 
@@ -218,4 +240,111 @@ const AccessRefreshToken = asyncHandler( async(req, res) =>{
     }
 })
 
-export { registerUser, loginUser, AccessRefreshToken}
+
+const changePasssword = asyncHandler( async(req, res) =>{
+    const { oldPassword, newPassword } = req.body
+
+    const user = await User.findById(req.user._id).select("-password - refreshToken")
+
+    if( !user){
+        throw new apiErrorResponse("User not found", 404)
+    }
+
+    const validatePassword = await user.isPasswordMatching(oldPassword)
+    if( !validatePassword ){
+        throw new apiErrorResponse("Old password is not valud", 401)
+    }
+
+    user.password = newPassword
+    await user.save({validateBeforeSave: false})
+
+    return res
+        .status(200)
+        .json(new apiResponse(
+            200,
+            {},
+            "Password chnaged successfully"
+        ))
+})
+
+const getCurrentUser = asyncHandler( async(req, res) =>{
+    return res
+        .staus(200)
+        .json(new apiResponse(
+            200,
+            {user: req.user},
+            "Current user fetched succesfully"
+        ))
+})
+
+const changeAccountDetails = asyncHandler( async(req, res) =>{
+    const { newUsername, newEmail } = req.body
+
+    if(!newUsername){
+        throw new apiErrorResponse("New username is required", 401)
+    }
+
+    if(!newEmail){
+        throw new apiErrorResponse("New email is required", 401)
+    }
+
+    const user = await User.findOne({
+        $or:[
+            {email: newEmail}, {username: newUsername}
+        ]
+    })
+
+    if(user){
+        throw new apiErrorResponse("User alreay exists with this email or username", 401)
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            $set:{
+                email: newEmail,
+                username: newUsername
+            }
+        },
+        {new : true}
+    ).select("-password -refreshToken")
+
+    return res
+        .status(200)
+        .json( new apiResponse(
+            200,
+            {user: updatedUser},
+            "User account details updated succesfully"
+        ))
+})
+
+const chnageAvatar = asyncHandler( async(req, res ) => {
+    const avatarPath = req?.file?.avatar[0]?.path
+
+    if( !avatarPath ){
+        throw new apiErrorResponse("Avatar is required", 401)
+    }
+
+    const avatar = await uploadToCloudinary(avatarPath)
+
+    const user = await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            $set:{
+                avatar: avatar.url
+            }
+        },
+        {new : true}
+    ).selct("-password - refreshToken")
+
+    return res
+        .status(200)
+        .json( new apiResponse(
+            200,
+            {user},
+            "User avatar updated successfully"
+        ))
+
+})
+
+export { registerUser, loginUser, AccessRefreshToken, logoutUser, changePasssword, getCurrentUser, changeAccountDetails, chnageAvatar}

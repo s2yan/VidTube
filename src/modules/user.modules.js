@@ -3,10 +3,6 @@ import bcrypt from 'bcrypt';
 import JWT from 'jsonwebtoken';
 
 const userSchema = new Schema({
-    fullname:{
-        type: String,
-        required: true,
-    },
     email:{
         type: String,
         required: true,
@@ -71,7 +67,7 @@ userSchema.methods.generateRefreshToke = function(){
 }
 
 //Generate a action token
-userSchema.mothods.generateAccessToken = function() {
+userSchema.methods.generateAccessToken = function() {
     return JWT.sign(
         {
             _id: this._id
